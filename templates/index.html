@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ADK Wellness Lookup</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <script defer src="{{ url_for('static', filename='app.js') }}"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <h1>Wellness Companion</h1>
+        <p>Powered by ADK + Gemini · SQLite backed profile lookup</p>
+      </header>
+
+      <section class="card" id="lookup-card">
+        <h2>Who are you?</h2>
+        <form id="username-form">
+          <label for="username">User name</label>
+          <div class="inline-field">
+            <input id="username" name="username" type="text" placeholder="alex" required />
+            <button type="submit">Look up</button>
+          </div>
+        </form>
+        <p class="helper">Try <strong>alex</strong> or <strong>jordan</strong> to see seeded data.</p>
+      </section>
+
+      <section class="card hidden" id="details-card">
+        <h2>Tell us more</h2>
+        <p>We could not find that username. Share a few quick details to create a plan.</p>
+        <form id="details-form">
+          <input type="hidden" id="details-username" name="username" />
+          <div class="grid">
+            <label>
+              Age
+              <input type="number" name="age" min="1" required />
+            </label>
+            <label>
+              Height (cm)
+              <input type="number" name="height" min="1" required />
+            </label>
+            <label>
+              Weight (kg)
+              <input type="number" name="weight" min="1" required />
+            </label>
+            <label>
+              Exercise minutes
+              <input type="number" name="exercise_minutes" min="0" required />
+            </label>
+            <label>
+              Intensity
+              <input type="text" name="intensity" placeholder="low / moderate / high" required />
+            </label>
+            <label>
+              Mood
+              <input type="text" name="mood" />
+            </label>
+            <label>
+              Restrictions
+              <input type="text" name="restrictions" placeholder="vegan, gluten-free..." />
+            </label>
+            <label>
+              Goals
+              <input type="text" name="goals" placeholder="Train for 5K" />
+            </label>
+            <label>
+              Daily goal (optional)
+              <input type="text" name="daily_goal" />
+            </label>
+          </div>
+          <div class="actions">
+            <button type="submit">Save profile</button>
+            <button type="button" id="cancel-details" class="secondary">Cancel</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card hidden" id="result-card">
+        <h2>Profile</h2>
+        <pre id="user-json"></pre>
+        <article id="summary"></article>
+        <div class="actions" style="margin-top: 1rem;">
+          <button type="button" id="generate-workout-btn" class="primary">Generate Workout Plan</button>
+        </div>
+      </section>
+
+      <section class="card hidden" id="workout-card">
+        <h2>Personalized Workout Plan</h2>
+        <p class="helper">Generated from Kaggle gym exercise dataset based on your profile</p>
+        <article id="workout-plan"></article>
+        <div class="actions" style="margin-top: 1rem;">
+          <button type="button" id="close-workout-btn" class="secondary">Close</button>
+        </div>
+      </section>
+
+      <section id="toast" class="hidden"></section>
+    </main>
+  </body>
+</html>
+
