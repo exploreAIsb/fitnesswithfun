@@ -15,6 +15,9 @@ const generateWorkoutBtn = document.getElementById("generate-workout-btn");
 const workoutCard = document.getElementById("workout-card");
 const workoutPlanEl = document.getElementById("workout-plan");
 const closeWorkoutBtn = document.getElementById("close-workout-btn");
+const workoutRefineForm = document.getElementById("workout-refine-form");
+const workoutAdditionalRequirements = document.getElementById("workout-additional-requirements");
+const refineWorkoutBtn = document.getElementById("refine-workout-btn");
 
 function showToast(message, isError = false) {
   toast.textContent = message;
@@ -147,11 +150,17 @@ generateWorkoutBtn.addEventListener("click", async () => {
   workoutPlanEl.textContent = "Generating workout plan from Kaggle dataset...";
   workoutCard.classList.remove("hidden");
   generateWorkoutBtn.disabled = true;
+  workoutRefineForm.style.display = "none"; // Hide refine form initially
 
   try {
-    const data = await postJson("/api/workout-plan", { username: currentUser.username });
+    const data = await postJson("/api/workout-plan", { 
+      username: currentUser.username,
+      is_follow_up: false
+    });
     if (data.status === "success") {
       workoutPlanEl.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit;">${data.workout_plan}</pre>`;
+      workoutRefineForm.style.display = "flex"; // Show refine form after initial plan
+      workoutAdditionalRequirements.value = ""; // Clear previous requirements
       showToast("Workout plan generated from Kaggle dataset");
     } else {
       throw new Error(data.error || "Failed to generate workout plan");
@@ -166,6 +175,47 @@ generateWorkoutBtn.addEventListener("click", async () => {
 
 closeWorkoutBtn.addEventListener("click", () => {
   workoutCard.classList.add("hidden");
+  workoutAdditionalRequirements.value = ""; // Clear form when closing
+});
+
+workoutRefineForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!currentUser) {
+    showToast("No user profile available", true);
+    return;
+  }
+
+  const additionalRequirements = workoutAdditionalRequirements.value.trim();
+  if (!additionalRequirements) {
+    showToast("Please enter additional requirements", true);
+    return;
+  }
+
+  const previousPlan = workoutPlanEl.innerHTML;
+  workoutPlanEl.textContent = "Refining workout plan with your additional requirements...";
+  refineWorkoutBtn.disabled = true;
+
+  try {
+    const data = await postJson("/api/workout-plan", {
+      username: currentUser.username,
+      additional_requirements: additionalRequirements,
+      is_follow_up: true
+    });
+    
+    if (data.status === "success") {
+      workoutPlanEl.innerHTML = `<pre style="white-space: pre-wrap; font-family: inherit;">${data.workout_plan}</pre>`;
+      workoutAdditionalRequirements.value = ""; // Clear form after successful refinement
+      showToast("Workout plan refined with your additional requirements");
+    } else {
+      workoutPlanEl.innerHTML = previousPlan; // Restore previous plan on error
+      throw new Error(data.error || "Failed to refine workout plan");
+    }
+  } catch (err) {
+    workoutPlanEl.innerHTML = previousPlan; // Restore previous plan on error
+    showToast(err.message, true);
+  } finally {
+    refineWorkoutBtn.disabled = false;
+  }
 });
 
 editProfileBtn.addEventListener("click", () => {

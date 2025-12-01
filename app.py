@@ -13,8 +13,26 @@ from db import fetch_user, insert_user, update_user, upsert_seed_data
 
 load_dotenv()
 
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+# Configure logging to both file and console
+log_level = os.getenv("LOG_LEVEL", "INFO")
+log_file = os.getenv("LOG_FILE", "app.log")
+
+# Create logs directory if it doesn't exist
+os.makedirs("logs", exist_ok=True)
+log_path = os.path.join("logs", log_file)
+
+# Configure root logger
+logging.basicConfig(
+    level=getattr(logging, log_level.upper(), logging.INFO),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_path),
+        logging.StreamHandler()  # Also log to console
+    ]
+)
+
 LOGGER = logging.getLogger(__name__)
+LOGGER.info(f"Logging initialized. Log file: {log_path}")
 
 app = Flask(__name__)
 adk_summarizer = AdkSummarizer()
@@ -90,29 +108,56 @@ def update_user_profile(username: str):
 
 @app.route("/api/workout-plan", methods=["POST"])
 def generate_workout_plan():
-    """Generate a personalized workout plan using the Kaggle exercise dataset."""
+    """
+    Generate or refine a personalized workout plan using the Kaggle exercise dataset.
+    
+    Supports ADK session memory for conversational refinement:
+    - Initial request: generates workout plan based on user profile
+    - Follow-up requests: refines plan with additional requirements using session memory
+    """
     payload = request.get_json(force=True) or {}
+    LOGGER.info(f"Workout plan request received: {payload}")
+    
     username = (payload.get("username") or "").strip().lower()
+    additional_requirements = payload.get("additional_requirements", "").strip()
+    is_follow_up = payload.get("is_follow_up", False)
+    
+    LOGGER.info(f"Processing workout plan - username: {username}, is_follow_up: {is_follow_up}, additional_requirements: {additional_requirements[:50] if additional_requirements else 'None'}...")
     
     if username:
         # Get user from database
         user_data = fetch_user(username)
         if not user_data:
+            LOGGER.warning(f"User not found: {username}")
             return jsonify({"error": "User not found."}), 404
+        LOGGER.info(f"User data retrieved: {username}")
     else:
         # Use provided user data directly
         user_data = payload
+        LOGGER.info("Using provided user data directly")
     
     try:
-        workout_plan = adk_summarizer.generate_workout_plan(user_data)
+        LOGGER.info(f"Calling adk_summarizer.generate_workout_plan for user: {user_data.get('username', 'unknown')}")
+        workout_plan = adk_summarizer.generate_workout_plan(
+            user_data,
+            additional_requirements=additional_requirements if additional_requirements else None,
+            is_follow_up=is_follow_up
+        )
+        LOGGER.info(f"Workout plan generated successfully. Length: {len(workout_plan) if workout_plan else 0} characters")
+        if workout_plan:
+            LOGGER.debug(f"Workout plan preview: {workout_plan[:200]}...")
+        else:
+            LOGGER.warning("Workout plan is empty!")
+        
         return jsonify({
             "status": "success",
             "workout_plan": workout_plan,
-            "user": user_data
+            "user": user_data,
+            "is_follow_up": is_follow_up
         })
     except Exception as exc:
         LOGGER.exception("Failed to generate workout plan: %s", exc)
-        return jsonify({"error": "Unable to generate workout plan."}), 500
+        return jsonify({"error": f"Unable to generate workout plan: {str(exc)}"}), 500
 
 
 @app.route("/api/health")

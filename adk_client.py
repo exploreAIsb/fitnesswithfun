@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
-from typing import List
+from typing import Dict, List, Optional
 
 from google.adk.agents import LlmAgent
 from google.adk.apps import App
@@ -22,6 +22,15 @@ except ImportError:
 
 LOGGER = logging.getLogger(__name__)
 logging.getLogger("google_adk.google.adk.runners").setLevel(logging.ERROR)
+
+# Configure file logging for adk_client if not already configured
+if not LOGGER.handlers:
+    import os
+    os.makedirs("logs", exist_ok=True)
+    file_handler = logging.FileHandler("logs/adk_client.log")
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    LOGGER.addHandler(file_handler)
+    LOGGER.setLevel(logging.INFO)
 
 
 class AdkSummarizer:
@@ -40,13 +49,18 @@ class AdkSummarizer:
                 "which queries the Kaggle gym exercise dataset (niharika41298/gym-exercise-data) "
                 "via MCP server based on the user's age, daily goal, intensity, mood, "
                 "injury restrictions, and available exercise time. "
-                "Create a personalized workout plan using ONLY exercises from that dataset."
+                "Create a personalized workout plan using ONLY exercises from that dataset. "
+                "When users provide additional requirements or want to refine the workout plan, "
+                "remember the previous context and incorporate the new requirements into an "
+                "updated workout plan. Build upon the previous plan rather than starting from scratch."
             ),
             tools=[suggest_workout_plan],
         )
         self.app = App(name="wellness_lookup_app", root_agent=self.agent)
         self.session_service = InMemorySessionService()
         self.runner = Runner(app=self.app, session_service=self.session_service)
+        # Store workout plan sessions per user (username -> session_id)
+        self._workout_sessions: Dict[str, str] = {}
 
     def summarize(self, payload: dict) -> str:
         """Generate a friendly summary for the provided user payload."""
@@ -92,29 +106,137 @@ class AdkSummarizer:
                 return "\n".join(texts).strip()
         return ""
 
-    def generate_workout_plan(self, user_data: dict) -> str:
-        """Generate a personalized workout plan using the Kaggle exercise dataset via MCP server."""
+    def _get_workout_session_id(self, username: str, is_follow_up: bool = False) -> str:
+        """Get or create a workout plan session for a user."""
+        # For follow-ups, reuse the session. For initial requests, create new session.
+        # This ensures session memory works for refinements but avoids issues with stale sessions
+        if not is_follow_up or username not in self._workout_sessions:
+            session_id = self._new_session_id()
+            self._workout_sessions[username] = session_id
+            LOGGER.info(f"Created new workout session for {username}: {session_id}")
+        else:
+            LOGGER.info(f"Reusing workout session for {username}: {self._workout_sessions[username]}")
+        return self._workout_sessions[username]
+
+    def generate_workout_plan(
+        self, 
+        user_data: dict, 
+        additional_requirements: Optional[str] = None,
+        is_follow_up: bool = False
+    ) -> str:
+        """
+        Generate or refine a personalized workout plan using the Kaggle exercise dataset via MCP server.
+        
+        Uses ADK session memory to maintain context across multiple requests for the same user.
+        
+        Args:
+            user_data: User profile data
+            additional_requirements: Optional additional requirements or refinements
+            is_follow_up: Whether this is a follow-up request (refining existing plan)
+        """
+        username = user_data.get("username", "anonymous")
+        LOGGER.info(f"Generating workout plan - username: {username}, is_follow_up: {is_follow_up}, has_additional_requirements: {bool(additional_requirements)}")
+        
+        session_id = self._get_workout_session_id(username, is_follow_up=is_follow_up)
+        LOGGER.info(f"Using session_id: {session_id} for user: {username}")
+        
         mcp_note = " (via MCP server)" if USE_MCP else ""
-        prompt = (
-            "Based on the following user profile, suggest a personalized workout plan "
-            f"using the suggest_workout_plan tool{mcp_note}. Use ONLY exercises from the Kaggle "
-            "gym exercise dataset (niharika41298/gym-exercise-data). Consider the user's age, "
-            "daily goal, intensity preference, mood, injury restrictions, and available exercise time. "
-            "Format the workout plan clearly with exercise names, sets, reps, and duration.\n\n"
-            f"User profile: {user_data}"
-        )
-        try:
-            events = list(
-                self.runner.run(
-                    user_id="web-user",
-                    session_id=self._new_session_id(),
-                    new_message=types.Content(
-                        role="user", parts=[types.Part(text=prompt)]
-                    ),
-                )
+        
+        if is_follow_up and additional_requirements:
+            # Follow-up message: refine existing plan with new requirements
+            prompt = (
+                f"The user wants to refine their workout plan with the following additional requirements: "
+                f"{additional_requirements}\n\n"
+                "Please update the workout plan using the suggest_workout_plan tool, incorporating "
+                "these new requirements while maintaining consistency with the previous plan. "
+                "Use ONLY exercises from the Kaggle gym exercise dataset (niharika41298/gym-exercise-data). "
+                "Format the updated workout plan clearly with exercise names, sets, reps, and duration."
             )
-            return self._last_text_chunk(events) or ""
+        else:
+            # Initial request: create new workout plan
+            prompt = (
+                "Based on the following user profile, suggest a personalized workout plan "
+                f"using the suggest_workout_plan tool{mcp_note}. Use ONLY exercises from the Kaggle "
+                "gym exercise dataset (niharika41298/gym-exercise-data). Consider the user's age, "
+                "daily goal, intensity preference, mood, injury restrictions, and available exercise time. "
+            )
+            if additional_requirements:
+                prompt += f"\n\nAdditional requirements: {additional_requirements}\n"
+            prompt += (
+                "Format the workout plan clearly with exercise names, sets, reps, and duration.\n\n"
+                f"User profile: {user_data}"
+            )
+        
+        try:
+            LOGGER.info(f"Sending prompt to ADK runner (length: {len(prompt)} chars)")
+            LOGGER.debug(f"Prompt: {prompt[:500]}...")
+            LOGGER.info(f"Model: {self.model}, User ID: workout-{username}, Session ID: {session_id}")
+            
+            # Check if runner.run is a generator
+            # Use "web-user" as user_id to match working summarize function
+            # The session_id will still maintain per-user session memory
+            runner_result = self.runner.run(
+                user_id="web-user",
+                session_id=session_id,
+                new_message=types.Content(
+                    role="user", parts=[types.Part(text=prompt)]
+                ),
+            )
+            LOGGER.info(f"Runner result type: {type(runner_result)}")
+            
+            # Consume the generator - convert to list
+            # Note: We can't use signal-based timeout here because Flask runs in a worker thread
+            events = []
+            try:
+                LOGGER.info("Starting to consume generator...")
+                for event in runner_result:
+                    events.append(event)
+                    event_type = type(event).__name__
+                    LOGGER.info(f"Received event: {event_type}")
+                    # Log tool calls if present
+                    if hasattr(event, 'tool_call') and event.tool_call:
+                        LOGGER.info(f"Tool call detected: {event.tool_call}")
+                    if hasattr(event, 'tool_result') and event.tool_result:
+                        LOGGER.info(f"Tool result received: {event.tool_result}")
+                LOGGER.info(f"Generator exhausted. Total events: {len(events)}")
+            except StopIteration:
+                LOGGER.info("Generator raised StopIteration (normal end)")
+            except Exception as gen_exc:
+                LOGGER.exception(f"Exception while consuming generator: {gen_exc}")
+                raise
+            
+            LOGGER.info(f"Received {len(events)} events from ADK runner")
+            
+            # Log details about each event
+            for i, event in enumerate(events):
+                event_type = type(event).__name__
+                LOGGER.info(f"Event {i}: {event_type}")
+                # Log all attributes of the event
+                if hasattr(event, '__dict__'):
+                    LOGGER.debug(f"  Event {i} attributes: {list(event.__dict__.keys())}")
+                if hasattr(event, 'content'):
+                    LOGGER.info(f"  Event {i} has content: {event.content}")
+                if hasattr(event, 'tool_call'):
+                    LOGGER.info(f"  Event {i} has tool_call: {event.tool_call}")
+                if hasattr(event, 'tool_result'):
+                    LOGGER.info(f"  Event {i} has tool_result: {event.tool_result}")
+                if hasattr(event, 'text'):
+                    LOGGER.info(f"  Event {i} has text: {event.text}")
+            
+            result = self._last_text_chunk(events) or ""
+            LOGGER.info(f"Extracted workout plan (length: {len(result)} chars)")
+            if not result:
+                LOGGER.warning("No text content found in ADK events")
+                # Try to get any text from events
+                for i, event in enumerate(events):
+                    if hasattr(event, 'content') and event.content:
+                        LOGGER.warning(f"Event {i} content: {event.content}")
+                    if hasattr(event, 'text'):
+                        LOGGER.warning(f"Event {i} text: {event.text}")
+            return result
         except Exception as exc:  # pragma: no cover - defensive
-            LOGGER.warning("Failed to generate workout plan: %s", exc)
+            LOGGER.exception("Failed to generate workout plan: %s", exc)
+            import traceback
+            LOGGER.error(f"Full traceback: {traceback.format_exc()}")
             return "Workout plan generation unavailable. Please check your configuration."
 

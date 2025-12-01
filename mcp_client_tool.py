@@ -105,6 +105,8 @@ def suggest_workout_plan_via_mcp(
     This is a synchronous wrapper around the async MCP client.
     Uses the Kaggle gym exercise dataset (niharika41298/gym-exercise-data) via MCP server.
     """
+    LOGGER.info(f"suggest_workout_plan_via_mcp called with: age={age}, daily_goal={daily_goal}, intensity={intensity}, mood={mood}, restrictions={restrictions}, exercise_minutes={exercise_minutes}, limit={limit}")
+    
     arguments = {
         "age": age,
         "daily_goal": daily_goal,
@@ -116,6 +118,7 @@ def suggest_workout_plan_via_mcp(
     }
     # Remove None values
     arguments = {k: v for k, v in arguments.items() if v is not None}
+    LOGGER.info(f"Calling MCP tool with arguments: {arguments}")
     
     try:
         # Check if we're in an async context (running event loop)
@@ -144,13 +147,14 @@ def suggest_workout_plan_via_mcp(
         
         # Clean the result to handle NaN and other non-serializable values
         result = _clean_json_result(result)
+        LOGGER.info(f"MCP tool returned result with keys: {list(result.keys()) if isinstance(result, dict) else 'not a dict'}")
         
         if isinstance(result, str):
             return json.loads(result)
         return result
     except Exception as e:
         error_msg = f"Failed to query Kaggle dataset via MCP: {e}"
-        LOGGER.error(error_msg)
+        LOGGER.exception(f"Exception in suggest_workout_plan_via_mcp: {e}")
         return {
             "error": error_msg,
             "exercises": [],
