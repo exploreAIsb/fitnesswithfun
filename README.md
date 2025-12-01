@@ -2,7 +2,7 @@
 
 This sample shows how to wire the Google Agent Development Kit (ADK) into a tiny Flask UI that queries a local SQLite database. When a username exists you'll see their stored profile along with a short Gemini generated summary. Otherwise the UI asks for more details and persists the profile.
 
-**New Feature**: The app now generates personalized workout plans using the [Kaggle gym exercise dataset](https://www.kaggle.com/datasets/niharika41298/gym-exercise-data) **via MCP (Model Context Protocol) server**. The ADK agent uses an MCP server tool to query this dataset based on user attributes (age, daily goal, intensity, mood, restrictions, exercise time).
+**New Feature**: The app now generates personalized workout plans using the [Kaggle gym exercise dataset](https://www.kaggle.com/datasets/niharika41298/gym-exercise-data) **via MCP (Model Context Protocol) server**. The ADK agent uses an MCP server tool to query this dataset based on user attributes (age, daily goal, intensity, mood, injury restrictions, exercise time).
 
 ### Prerequisites
 
@@ -57,7 +57,7 @@ flask --app app run --debug
 
 Visit http://127.0.0.1:5000 and try the seeded users `alex` or `jordan`. Creating a brand new profile will store it in SQLite and display a Gemini powered summary via ADK.
 
-**Workout Plan Generation**: After viewing a user profile, click the "Generate Workout Plan" button to get a personalized workout plan based on the Kaggle gym exercise dataset. The ADK agent uses an **MCP server** (`kaggle_mcp_server.py`) to query the dataset using the user's age, daily goal, intensity, mood, restrictions, and available exercise time. The MCP server ensures all queries go through the standardized Model Context Protocol.
+**Workout Plan Generation**: After viewing a user profile, click the "Generate Workout Plan" button to get a personalized workout plan based on the Kaggle gym exercise dataset. The ADK agent uses an **MCP server** (`kaggle_mcp_server.py`) to query the dataset using the user's age, daily goal, intensity, mood, injury restrictions, and available exercise time. The MCP server ensures all queries go through the standardized Model Context Protocol.
 
 ### Notes
 

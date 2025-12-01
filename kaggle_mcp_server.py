@@ -220,7 +220,7 @@ def search_exercises(
         daily_goal: User's daily fitness goal (e.g., "build muscle", "cardio", "flexibility")
         intensity: Desired workout intensity (low, moderate, high)
         mood: Current mood/energy level
-        restrictions: Any physical restrictions or limitations
+        restrictions: Any injury restrictions or limitations
         exercise_minutes: Available time for exercise in minutes
         limit: Maximum number of exercises to return (default: 10)
         use_sqlite: If True, use SQLite database if available (default: False, queries Kaggle directly)

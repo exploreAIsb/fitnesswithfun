@@ -40,7 +40,7 @@ def suggest_workout_plan(
     - Daily goal (matches exercise types/goals)
     - Intensity level (matches exercise difficulty)
     - Mood (suggests exercises that match energy level)
-    - Restrictions (filters out incompatible exercises)
+    - Injury Restrictions (filters out incompatible exercises)
     - Exercise time available (suggests exercises that fit the time)
     
     Args:
@@ -48,7 +48,7 @@ def suggest_workout_plan(
         daily_goal: User's daily fitness goal
         intensity: Desired workout intensity (low, moderate, high)
         mood: Current mood/energy level
-        restrictions: Any physical restrictions or limitations
+        restrictions: Any injury restrictions or limitations
         exercise_minutes: Available time for exercise in minutes
         limit: Maximum number of exercises to return
         

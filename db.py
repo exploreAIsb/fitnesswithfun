@@ -103,9 +103,9 @@ def upsert_seed_data() -> None:
             {
                 "username": "alex",
                 "age": 32,
-                "height": 172,
-                "weight": 72,
-                "restrictions": "vegetarian",
+                "height": 68,
+                "weight": 159,
+                "restrictions": "knee injury",
                 "goals": "Build lean muscle",
                 "mood": "Focused",
                 "exercise_minutes": 45,
@@ -115,8 +115,8 @@ def upsert_seed_data() -> None:
             {
                 "username": "jordan",
                 "age": 41,
-                "height": 180,
-                "weight": 84,
+                "height": 71,
+                "weight": 185,
                 "restrictions": "none",
                 "goals": "Marathon prep",
                 "mood": "Motivated",

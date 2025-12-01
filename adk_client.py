@@ -39,7 +39,7 @@ class AdkSummarizer:
                 "When asked to suggest a workout plan, use the suggest_workout_plan tool "
                 "which queries the Kaggle gym exercise dataset (niharika41298/gym-exercise-data) "
                 "via MCP server based on the user's age, daily goal, intensity, mood, "
-                "restrictions, and available exercise time. "
+                "injury restrictions, and available exercise time. "
                 "Create a personalized workout plan using ONLY exercises from that dataset."
             ),
             tools=[suggest_workout_plan],
@@ -99,7 +99,7 @@ class AdkSummarizer:
             "Based on the following user profile, suggest a personalized workout plan "
             f"using the suggest_workout_plan tool{mcp_note}. Use ONLY exercises from the Kaggle "
             "gym exercise dataset (niharika41298/gym-exercise-data). Consider the user's age, "
-            "daily goal, intensity preference, mood, restrictions, and available exercise time. "
+            "daily goal, intensity preference, mood, injury restrictions, and available exercise time. "
             "Format the workout plan clearly with exercise names, sets, reps, and duration.\n\n"
             f"User profile: {user_data}"
         )
