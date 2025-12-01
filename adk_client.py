@@ -173,8 +173,9 @@ class AdkSummarizer:
             LOGGER.info(f"Model: {self.model}, User ID: workout-{username}, Session ID: {session_id}")
             
             # Check if runner.run is a generator
-            # Use "web-user" as user_id to match working summarize function
-            # The session_id will still maintain per-user session memory
+            # Note: user_id must be "web-user" for ADK runner to work properly
+            # When we tried f"workout-{username}" or just username, it returned 0 events
+            # The session_id is what actually maintains per-user session memory
             runner_result = self.runner.run(
                 user_id="web-user",
                 session_id=session_id,
