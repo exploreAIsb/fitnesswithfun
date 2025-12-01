@@ -61,6 +61,24 @@ This sample shows how to wire the Google Agent Development Kit (ADK) into a tiny
 
 ### Run the app
 
+**Recommended: Use the wrapper script** (automatically checks and frees the port):
+
+```bash
+# Run with default port (5001)
+./run.sh
+
+# Or specify a custom port
+PORT=5002 ./run.sh
+```
+
+The `run.sh` script will:
+- Check if the port is available
+- Automatically kill any process using the port if needed
+- Activate the virtual environment if it exists
+- Start the Flask app
+
+**Alternative: Manual startup**
+
 ```bash
 # Activate virtual environment first
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
@@ -71,7 +89,7 @@ python app.py
 flask --app app run --debug
 ```
 
-Visit http://127.0.0.1:5000 and try the seeded users `alex` or `jordan`. Creating a brand new profile will store it in SQLite and display a Gemini powered summary via ADK.
+Visit http://127.0.0.1:5001 (or your configured PORT) and try the seeded users `alex` or `jordan`. Creating a brand new profile will store it in SQLite and display a Gemini powered summary via ADK.
 
 **Features:**
 - **User Profile Management**: Look up existing users or create new profiles with age, height (inches), weight (lbs), exercise minutes, intensity, mood, injury restrictions, goals, and daily goals.
