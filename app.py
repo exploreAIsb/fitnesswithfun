@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request
 
 from adk_client import AdkSummarizer
-from db import fetch_user, insert_user, upsert_seed_data
+from db import fetch_user, insert_user, update_user, upsert_seed_data
 
 load_dotenv()
 
@@ -62,6 +62,30 @@ def create_user():
     stored = stored or validated
     summary = adk_summarizer.summarize(stored)
     return jsonify({"status": "created", "user": stored, "summary": summary}), 201
+
+
+@app.route("/api/users/<username>", methods=["PUT"])
+def update_user_profile(username: str):
+    """Update an existing user's profile."""
+    username = username.strip().lower()
+    if not username:
+        return jsonify({"error": "Username is required."}), 400
+
+    # Check if user exists
+    existing = fetch_user(username)
+    if not existing:
+        return jsonify({"error": "User not found."}), 404
+
+    data = request.get_json(force=True) or {}
+    validated = _normalize_payload(username, data)
+    
+    try:
+        updated = update_user(username, validated)
+        summary = adk_summarizer.summarize(updated)
+        return jsonify({"status": "updated", "user": updated, "summary": summary})
+    except Exception as exc:
+        LOGGER.exception("Failed to update user: %s", exc)
+        return jsonify({"error": "Unable to update user."}), 500
 
 
 @app.route("/api/workout-plan", methods=["POST"])

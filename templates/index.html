@@ -27,8 +27,8 @@
       </section>
 
       <section class="card hidden" id="details-card">
-        <h2>Tell us more</h2>
-        <p>We could not find that username. Share a few quick details to create a plan.</p>
+        <h2 id="details-title">Tell us more</h2>
+        <p id="details-description">We could not find that username. Share a few quick details to create a plan.</p>
         <form id="details-form">
           <input type="hidden" id="details-username" name="username" />
           <div class="grid">
@@ -70,7 +70,7 @@
             </label>
           </div>
           <div class="actions">
-            <button type="submit">Save profile</button>
+            <button type="submit" id="details-submit-btn">Save profile</button>
             <button type="button" id="cancel-details" class="secondary">Cancel</button>
           </div>
         </form>
@@ -81,6 +81,7 @@
         <pre id="user-json"></pre>
         <article id="summary"></article>
         <div class="actions" style="margin-top: 1rem;">
+          <button type="button" id="edit-profile-btn" class="secondary">Edit Profile</button>
           <button type="button" id="generate-workout-btn" class="primary">Generate Workout Plan</button>
         </div>
       </section>

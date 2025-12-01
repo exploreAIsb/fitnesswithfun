@@ -93,6 +93,32 @@ def insert_user(user_payload: Dict[str, Any]) -> Dict[str, Any]:
     return stored
 
 
+def update_user(username: str, user_payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Update an existing user and return the updated record."""
+    with get_connection() as conn:
+        conn.execute(
+            """
+            UPDATE users SET
+                age = :age,
+                height = :height,
+                weight = :weight,
+                restrictions = :restrictions,
+                goals = :goals,
+                mood = :mood,
+                exercise_minutes = :exercise_minutes,
+                intensity = :intensity,
+                daily_goal = :daily_goal
+            WHERE username = :username
+            """,
+            {**user_payload, "username": username},
+        )
+        conn.commit()
+    stored = fetch_user(username)
+    if not stored:  # pragma: no cover - defensive
+        raise RuntimeError("Failed to read the updated user record.")
+    return stored
+
+
 def upsert_seed_data() -> None:
     """Create the database with minimal demo users if it is empty."""
     init_db()

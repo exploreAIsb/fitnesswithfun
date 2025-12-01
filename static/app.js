@@ -2,11 +2,15 @@ const usernameForm = document.getElementById("username-form");
 const detailsCard = document.getElementById("details-card");
 const detailsForm = document.getElementById("details-form");
 const detailsUsername = document.getElementById("details-username");
+const detailsTitle = document.getElementById("details-title");
+const detailsDescription = document.getElementById("details-description");
+const detailsSubmitBtn = document.getElementById("details-submit-btn");
 const resultCard = document.getElementById("result-card");
 const userJson = document.getElementById("user-json");
 const summaryEl = document.getElementById("summary");
 const toast = document.getElementById("toast");
 const cancelDetails = document.getElementById("cancel-details");
+const editProfileBtn = document.getElementById("edit-profile-btn");
 const generateWorkoutBtn = document.getElementById("generate-workout-btn");
 const workoutCard = document.getElementById("workout-card");
 const workoutPlanEl = document.getElementById("workout-plan");
@@ -19,10 +23,35 @@ function showToast(message, isError = false) {
   setTimeout(() => toast.classList.add("hidden"), 3500);
 }
 
-function toggleDetails(show) {
+let isEditMode = false;
+
+function toggleDetails(show, editUser = null) {
   detailsCard.classList.toggle("hidden", !show);
-  if (!show) {
-    detailsForm.reset();
+  if (show && editUser) {
+    // Edit mode: populate form with user data
+    isEditMode = true;
+    detailsTitle.textContent = "Edit Profile";
+    detailsDescription.textContent = "Update your profile information below.";
+    detailsSubmitBtn.textContent = "Update Profile";
+    detailsUsername.value = editUser.username;
+    detailsForm.age.value = editUser.age || "";
+    detailsForm.height.value = editUser.height || "";
+    detailsForm.weight.value = editUser.weight || "";
+    detailsForm.exercise_minutes.value = editUser.exercise_minutes || "";
+    detailsForm.intensity.value = editUser.intensity || "";
+    detailsForm.mood.value = editUser.mood || "";
+    detailsForm.restrictions.value = editUser.restrictions || "";
+    detailsForm.goals.value = editUser.goals || "";
+    detailsForm.daily_goal.value = editUser.daily_goal || "";
+  } else {
+    // Create mode: reset form
+    isEditMode = false;
+    detailsTitle.textContent = "Tell us more";
+    detailsDescription.textContent = "We could not find that username. Share a few quick details to create a plan.";
+    detailsSubmitBtn.textContent = "Save profile";
+    if (!show) {
+      detailsForm.reset();
+    }
   }
 }
 
@@ -30,6 +59,19 @@ function toggleDetails(show) {
 async function postJson(url, payload) {
   const response = await fetch(url, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || "Request failed");
+  }
+  return response.json();
+}
+
+async function putJson(url, payload) {
+  const response = await fetch(url, {
+    method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
@@ -68,10 +110,18 @@ detailsForm.addEventListener("submit", async (event) => {
   formData.username = detailsUsername.value;
 
   try {
-    const data = await postJson("/api/users", formData);
+    let data;
+    if (isEditMode) {
+      // Update existing user
+      data = await putJson(`/api/users/${formData.username}`, formData);
+      showToast("Profile updated");
+    } else {
+      // Create new user
+      data = await postJson("/api/users", formData);
+      showToast("Profile created");
+    }
     renderUser(data.user, data.summary);
     toggleDetails(false);
-    showToast("Profile created");
   } catch (err) {
     showToast(err.message, true);
   }
@@ -116,5 +166,14 @@ generateWorkoutBtn.addEventListener("click", async () => {
 
 closeWorkoutBtn.addEventListener("click", () => {
   workoutCard.classList.add("hidden");
+});
+
+editProfileBtn.addEventListener("click", () => {
+  if (!currentUser) {
+    showToast("No user profile available", true);
+    return;
+  }
+  toggleDetails(true, currentUser);
+  resultCard.classList.add("hidden");
 });
 
