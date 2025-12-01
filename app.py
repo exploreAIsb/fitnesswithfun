@@ -201,5 +201,6 @@ def handle_value_error(err: ValueError):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.getenv("PORT", 5001))
+    app.run(debug=True, port=port)
 
