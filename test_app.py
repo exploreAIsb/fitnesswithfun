@@ -442,10 +442,12 @@ class TestValueErrorHandler:
 # ---------------------------------------------------------------------------
 
 class TestAdversarial:
-    def test_lookup_with_unicode_username(self, client):
+    @patch("app.fetch_user", return_value=None)
+    def test_lookup_with_unicode_username(self, mock_fetch, client):
         # Unicode characters in username should not crash the app
         resp = client.post("/api/users/lookup", json={"username": "用户名"})
-        assert resp.status_code in (200, 404)
+        assert resp.status_code == 200
+        assert resp.get_json()["status"] == "not_found"
 
     @patch("app.fetch_user", return_value=_STORED_USER)
     def test_lookup_with_very_long_username(self, mock_fetch, client):
