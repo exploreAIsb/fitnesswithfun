@@ -1,36 +1,16 @@
 from __future__ import annotations
 
 import sqlite3
-import sys
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Mock all Google ADK / genai packages before importing app, since they are
-# unavailable in the test environment and imported at module level.
-_adk_mocks = {}
-for _mod_name in (
-    "google",
-    "google.adk",
-    "google.adk.agents",
-    "google.adk.apps",
-    "google.adk.runners",
-    "google.adk.sessions",
-    "google.adk.sessions.in_memory_session_service",
-    "google.genai",
-    "google.genai.types",
-    "mcp",
-    "mcp.client",
-    "mcp.client.stdio",
-    "fastmcp",
-):
-    _adk_mocks[_mod_name] = MagicMock()
-sys.modules.update(_adk_mocks)
-
-# Now we can safely import app (which imports adk_client → google.adk, etc.)
-# We still need to patch upsert_seed_data to avoid touching the real DB at import time.
-with patch("db.upsert_seed_data"):
+# Patch heavy side-effects that run at app module level:
+#   - AdkSummarizer() constructor (may require Google credentials)
+#   - upsert_seed_data() (creates/seeds a real SQLite database)
+with patch("adk_client.AdkSummarizer", return_value=MagicMock()), \
+     patch("db.upsert_seed_data"):
     from app import _normalize_payload, app
 
 
