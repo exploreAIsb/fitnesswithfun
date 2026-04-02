@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name, unused-argument, wrong-import-position
 """Tests for app.py – Flask routes, _normalize_payload, and error handler."""
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ _fake_adk_client.AdkSummarizer.return_value = _mock_summarizer_instance
 sys.modules["adk_client"] = _fake_adk_client
 
 # Import db first so we can patch upsert_seed_data before app.py binds it
-import db as _db_module  # noqa: E402  # pylint: disable=wrong-import-position
+import db as _db_module  # noqa: E402
 
 with patch.object(_db_module, "upsert_seed_data"):
     import app as app_module  # noqa: E402
