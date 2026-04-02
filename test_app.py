@@ -2,17 +2,25 @@
 
 from __future__ import annotations
 
-import json
 import sqlite3
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Patch heavy external dependencies before importing app module
-with patch("app.AdkSummarizer") as _mock_adk_cls, \
-     patch("app.upsert_seed_data"):
-    _mock_adk_cls.return_value = MagicMock()
+# Patch heavy external dependencies before importing app module.
+# AdkSummarizer lives in adk_client which imports google.adk (unavailable in CI).
+# We inject a fake module so the import chain succeeds without the real SDK.
+_fake_adk_client = MagicMock()
+_mock_summarizer_instance = MagicMock()
+_fake_adk_client.AdkSummarizer.return_value = _mock_summarizer_instance
+sys.modules["adk_client"] = _fake_adk_client
+
+with patch("db.upsert_seed_data"):
     import app as app_module
+
+# Point the module-level summarizer to our controllable mock
+app_module.adk_summarizer = _mock_summarizer_instance
 
 _VALID_USER_PAYLOAD = {
     "username": "testuser",
