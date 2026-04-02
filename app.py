@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict
-
 import sqlite3
-from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, request
+from typing import Any, Dict
 
 from adk_client import AdkSummarizer
 from db import fetch_user, insert_user, update_user, upsert_seed_data
+from flask import Flask, jsonify, render_template, request
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -96,7 +96,7 @@ def update_user_profile(username: str):
 
     data = request.get_json(force=True) or {}
     validated = _normalize_payload(username, data)
-    
+
     try:
         updated = update_user(username, validated)
         summary = adk_summarizer.summarize(updated)
@@ -110,20 +110,20 @@ def update_user_profile(username: str):
 def generate_workout_plan():
     """
     Generate or refine a personalized workout plan using the Kaggle exercise dataset.
-    
+
     Supports ADK session memory for conversational refinement:
     - Initial request: generates workout plan based on user profile
     - Follow-up requests: refines plan with additional requirements using session memory
     """
     payload = request.get_json(force=True) or {}
     LOGGER.info(f"Workout plan request received: {payload}")
-    
+
     username = (payload.get("username") or "").strip().lower()
-    additional_requirements = payload.get("additional_requirements", "").strip()
+    additional_requirements = (payload.get("additional_requirements") or "").strip()
     is_follow_up = payload.get("is_follow_up", False)
-    
+
     LOGGER.info(f"Processing workout plan - username: {username}, is_follow_up: {is_follow_up}, additional_requirements: {additional_requirements[:50] if additional_requirements else 'None'}...")
-    
+
     if username:
         # Get user from database
         user_data = fetch_user(username)
@@ -135,7 +135,7 @@ def generate_workout_plan():
         # Use provided user data directly
         user_data = payload
         LOGGER.info("Using provided user data directly")
-    
+
     try:
         LOGGER.info(f"Calling adk_summarizer.generate_workout_plan for user: {user_data.get('username', 'unknown')}")
         workout_plan = adk_summarizer.generate_workout_plan(
@@ -148,7 +148,7 @@ def generate_workout_plan():
             LOGGER.debug(f"Workout plan preview: {workout_plan[:200]}...")
         else:
             LOGGER.warning("Workout plan is empty!")
-        
+
         return jsonify({
             "status": "success",
             "workout_plan": workout_plan,
