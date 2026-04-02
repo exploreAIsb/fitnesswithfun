@@ -79,6 +79,7 @@ def create_user():
 
     stored = stored or validated
     summary = adk_summarizer.summarize(stored)
+    LOGGER.info(f"Created user: {username}")
     return jsonify({"status": "created", "user": stored, "summary": summary}), 201
 
 
