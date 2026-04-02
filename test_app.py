@@ -66,7 +66,9 @@ def client():
 def _reset_summarizer():
     """Reset the mock summarizer before each test so calls don't leak."""
     app_module.adk_summarizer.reset_mock()
+    app_module.adk_summarizer.summarize.side_effect = None
     app_module.adk_summarizer.summarize.return_value = "Great profile!"
+    app_module.adk_summarizer.generate_workout_plan.side_effect = None
     app_module.adk_summarizer.generate_workout_plan.return_value = "Do 3 sets of squats."
 
 
