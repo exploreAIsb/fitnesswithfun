@@ -16,8 +16,11 @@ _mock_summarizer_instance = MagicMock()
 _fake_adk_client.AdkSummarizer.return_value = _mock_summarizer_instance
 sys.modules["adk_client"] = _fake_adk_client
 
-with patch("db.upsert_seed_data"):
-    import app as app_module
+# Import db first so we can patch upsert_seed_data before app.py binds it
+import db as _db_module  # noqa: E402  # pylint: disable=wrong-import-position
+
+with patch.object(_db_module, "upsert_seed_data"):
+    import app as app_module  # noqa: E402
 
 # Point the module-level summarizer to our controllable mock
 app_module.adk_summarizer = _mock_summarizer_instance
