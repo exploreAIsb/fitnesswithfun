@@ -11,7 +11,8 @@ with patch("adk_client.LlmAgent"), \
      patch("adk_client.App"), \
      patch("adk_client.InMemorySessionService"), \
      patch("adk_client.Runner"), \
-     patch("adk_client.suggest_workout_plan"):
+     patch("adk_client.suggest_workout_plan"), \
+     patch("db.upsert_seed_data"):
     from app import _normalize_payload, app
 
 
